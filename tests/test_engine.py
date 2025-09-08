@@ -62,9 +62,7 @@ def test_run_restore_happy_path(tmp_path, caplog):
 
 
 def test_run_restore_fails_if_backup_source_missing(tmp_path, caplog):
-    """
-    Tests that run_restore fails gracefully if the backup source directory does not exist.
-    """
+    """Tests that run_restore fails if the backup source does not exist."""
     non_existent_source = tmp_path / "non_existent_backup"
     target_dir = tmp_path / "target"
     target_dir.mkdir()

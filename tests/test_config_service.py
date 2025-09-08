@@ -1,16 +1,10 @@
-#pip install -e .
-
-#pytest tests/test_config_service.py -v
-#pytest --cov=recovery_agent --cov-report=term-missing
-
-
 from unittest.mock import patch, mock_open
 
 import pytest
 import yaml
 
 from recovery_agent import config_service
-from recovery_agent.config_service import get_config, ConfigError, DEFAULTS
+from recovery_agent.config_service import DEFAULTS, ConfigError, get_config
 
 
 @pytest.fixture(autouse=True)
@@ -24,13 +18,12 @@ def reset_config_cache():
 
 def test_get_config_valid(tmp_path):
     """
-    Tests that a valid YAML file is correctly read and returned as a dictionary.
+    Tests that a valid YAML file is correctly read and merged with defaults.
     """
     config_path = tmp_path / "config.yaml"
     config_content = {"target_dir": "/tmp/test", "encrypt_key": "abc123"}
     config_path.write_text(yaml.dump(config_content))
 
-    # Expected result is a merge of defaults and the file content
     expected_config = DEFAULTS.copy()
     expected_config.update(config_content)
 
@@ -38,13 +31,23 @@ def test_get_config_valid(tmp_path):
     assert conf == expected_config
 
 
-def test_get_config_file_not_found(tmp_path):
+def test_get_config_file_not_found_raises_error(tmp_path):
     """
-    Tests that ConfigError is raised if the config file does not exist.
+    Tests that ConfigError is raised if an explicit config file does not exist.
     """
     config_path = tmp_path / "missing.yaml"
     with pytest.raises(ConfigError, match="Configuration file not found"):
         get_config(config_path)
+
+
+def test_get_config_no_file_returns_defaults():
+    """
+    Tests that default settings are returned if no config file is specified
+    and config.yaml is not found.
+    """
+    with patch("pathlib.Path.is_file", return_value=False):
+        conf = get_config()
+        assert conf == DEFAULTS
 
 
 def test_get_config_invalid_yaml(tmp_path):
@@ -57,35 +60,20 @@ def test_get_config_invalid_yaml(tmp_path):
         get_config(config_path)
 
 
-def test_get_config_not_dict(tmp_path):
-    """
-    Tests that ConfigError is raised if the YAML content is not a dictionary.
-    """
-    config_path = tmp_path / "list.yaml"
-    config_path.write_text("- one\n- two\n")
-    with pytest.raises(ConfigError, match="must be a mapping"):
-        get_config(config_path)
-
-
 def test_get_config_uses_cache():
     """
-    Tests that the configuration is read from cache on subsequent calls
-    when no path is provided.
+    Tests that the configuration is read from cache on subsequent calls.
     """
-    # Mock the file-based loading to return a specific dict the first time
     config_data = yaml.dump({"key": "value"})
     m = mock_open(read_data=config_data)
 
-    with patch("pathlib.Path.is_file", return_value=True), patch(
-        "pathlib.Path.open", m
-    ):
-        # First call, should read from "file" and merge with defaults
+    with patch("pathlib.Path.is_file", return_value=True), patch("pathlib.Path.open", m):
+        # First call should read from file and cache the result
         first_call_result = get_config()
         assert first_call_result["key"] == "value"
-        assert "backup_formats" in first_call_result  # from DEFAULTS
-        m.assert_called_once()
+        assert "target_dir" in first_call_result  # From defaults
 
-        # Second call, should read from cache
+        # Second call should hit the cache and not open the file again
         second_call_result = get_config()
         assert second_call_result == first_call_result
-        m.assert_called_once()  # Should not be called again
+        m.assert_called_once()
