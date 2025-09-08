@@ -11,6 +11,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+
 def main():
     try:
         # Get validated config from the central service
@@ -33,7 +34,7 @@ def main():
 
         if args.action == "restore":
             if not args.backup:
-                parser.error("--backup is required when action is 'restore'")
+                parser.error('argument --backup is required for action "restore"')
 
             engine = RestorationEngine(backup_path=args.backup, config=settings)
             engine.run_restore()

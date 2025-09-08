@@ -77,8 +77,9 @@ def test_get_config_uses_cache():
     config_data = yaml.dump({"key": "value"})
     m = mock_open(read_data=config_data)
 
-    with patch("pathlib.Path.is_file", return_value=True), patch(
-            "pathlib.Path.open", m
+    with (
+        patch("pathlib.Path.is_file", return_value=True),
+        patch("pathlib.Path.open", m),
     ):
         # First call should read from file and cache the result
         first_call_result = get_config()
