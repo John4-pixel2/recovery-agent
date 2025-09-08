@@ -1,0 +1,15 @@
+flask
+pandas
+cryptography
+pyyaml
+
+[dev]
+black
+ruff
+build
+mypy
+types-PyYAML
+
+[test]
+pytest
+pytest-cov

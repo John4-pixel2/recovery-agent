@@ -1,0 +1,5 @@
+target_dir: "/opt/recovery_agent/restored_files"
+encrypt_key: "your-super-secret-base64-key" # Placeholder, should be generated securely
+backup_formats:
+  logs: "*.log"
+  db: "*.sql"

@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recovery_agent"
+version = "0.1.0"
+description = "Recovery agent for restoration tasks"
+authors = [
+  { name = "Johannes Schreiber" }
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.12"
+dependencies = [
+    "flask",
+    "pandas",
+    "cryptography",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+dev = [
+    "black",
+    "ruff",
+    "build",
+    "mypy",
+    "types-PyYAML",
+]
+
+[project.scripts]
+recovery-agent-cli = "recovery_agent.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["recovery_agent"]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+# E/W = pycodestyle errors/warnings, F = pyflakes, I = isort, UP = pyupgrade
+select = ["E", "F", "W", "I", "UP"]
