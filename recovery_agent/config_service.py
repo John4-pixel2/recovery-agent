@@ -22,11 +22,11 @@ DEFAULTS: dict[str, Any] = {
 
 def get_config(path: str | Path | None = None) -> dict[str, Any]:
     """
-    Loads, validates, and returns the application configuration from a YAML file.
+    Loads, validates, and returns the application configuration.
 
     - If a path is provided, it must exist.
-    - If no path is provided, it falls back to `config.yaml` but does not fail
-      if it's missing.
+    - If no path is provided, it falls back to `config.yaml` but does not
+      fail if it's missing.
     - Loaded settings are merged with default values.
     - The result is cached to avoid repeated file I/O on subsequent calls.
     """

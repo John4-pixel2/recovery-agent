@@ -66,7 +66,7 @@ def test_get_config_not_dict(tmp_path):
     """
     config_path = tmp_path / "list.yaml"
     config_path.write_text("- one\n- two\n")
-    with pytest.raises(ConfigError, match="Config must be a mapping \(dict\)."):
+    with pytest.raises(ConfigError, match=r"Config must be a mapping \(dict\)."):
         get_config(config_path)
 
 
@@ -78,7 +78,7 @@ def test_get_config_uses_cache():
     m = mock_open(read_data=config_data)
 
     with patch("pathlib.Path.is_file", return_value=True), patch(
-        "pathlib.Path.open", m
+            "pathlib.Path.open", m
     ):
         # First call should read from file and cache the result
         first_call_result = get_config()
