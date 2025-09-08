@@ -1,7 +1,3 @@
-#pip install -e .
-#pytest tests/test_config_service.py -v
-#pytest tests/test_app.py -v
-#pytest --cov=recovery_agent --cov-report=term-missing
 
 # recovery_agent/config_service.py
 
