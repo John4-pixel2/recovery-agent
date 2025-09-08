@@ -93,22 +93,27 @@ def test_main_handles_test_action_successfully(monkeypatch, caplog):
     assert "Tests passed!" in caplog.text
 
 
-def test_main_entry_point_dunder(monkeypatch):
+@pytest.mark.filterwarnings("ignore:.*'recovery_agent.main' found in sys.modules.*")
+def test_main_entry_point_dunder(monkeypatch, tmp_path):
     """
     Tests that the if __name__ == '__main__' block correctly calls main().
     """
-    # Provide minimal valid command-line arguments for argparse to succeed
-    monkeypatch.setattr(sys, "argv", ["some_script_name", "--action", "test"])
+    # 1. Create a dummy config file so the real get_config() doesn't fail
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("target_dir: /tmp\nencrypt_key: secret\nbackup_formats: {}")
 
-    with patch("recovery_agent.main.main", return_value=0) as mock_main, patch(
-        "sys.exit"
-    ) as mock_exit:
+    # 2. Change the current directory to where the config is
+    monkeypatch.chdir(tmp_path)
+
+    # 3. Provide minimal valid command-line arguments
+    monkeypatch.setattr(sys, "argv", ["recovery_agent", "--action", "test"])
+
+    # 4. Patch sys.exit to prevent the test runner from stopping
+    with patch("sys.exit") as mock_exit:
         # Use runpy to execute the module's __main__ block
         import runpy
 
         runpy.run_module("recovery_agent.main", run_name="__main__")
 
-        # Assert that our mocked main function was called
-        mock_main.assert_called_once()
-        # Assert that sys.exit was called with the return value of main
+        # 6. Assert that the program exited with code 0 (success)
         mock_exit.assert_called_once_with(0)
