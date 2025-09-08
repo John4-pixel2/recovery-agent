@@ -98,7 +98,7 @@ def test_main_entry_point_dunder(monkeypatch):
     Tests that the if __name__ == '__main__' block correctly calls main().
     """
     # Provide minimal valid command-line arguments for argparse to succeed
-    monkeypatch.setattr(sys, "argv", ["recovery_agent/main.py", "--action", "test"])
+    monkeypatch.setattr(sys, "argv", ["some_script_name", "--action", "test"])
 
     with patch("recovery_agent.main.main", return_value=0) as mock_main, patch(
         "sys.exit"
