@@ -4,13 +4,13 @@
 #pytest --cov=recovery_agent --cov-report=term-missing
 
 
-import pytest
-import yaml
-from pathlib import Path
 from unittest.mock import patch, mock_open
 
+import pytest
+import yaml
+
 from recovery_agent import config_service
-from recovery_agent.config_service import get_config, ConfigError
+from recovery_agent.config_service import get_config, ConfigError, DEFAULTS
 
 
 @pytest.fixture(autouse=True)
@@ -30,8 +30,12 @@ def test_get_config_valid(tmp_path):
     config_content = {"target_dir": "/tmp/test", "encrypt_key": "abc123"}
     config_path.write_text(yaml.dump(config_content))
 
+    # Expected result is a merge of defaults and the file content
+    expected_config = DEFAULTS.copy()
+    expected_config.update(config_content)
+
     conf = get_config(config_path)
-    assert conf == config_content
+    assert conf == expected_config
 
 
 def test_get_config_file_not_found(tmp_path):
@@ -70,16 +74,18 @@ def test_get_config_uses_cache():
     """
     # Mock the file-based loading to return a specific dict the first time
     config_data = yaml.dump({"key": "value"})
-    with patch(
-        "recovery_agent.config_service.Path.is_file", return_value=True
-    ), patch("builtins.open", mock_open(read_data=config_data)) as mock_open_call:
+    m = mock_open(read_data=config_data)
 
-        # First call, should read from "file"
+    with patch("pathlib.Path.is_file", return_value=True), patch(
+        "pathlib.Path.open", m
+    ):
+        # First call, should read from "file" and merge with defaults
         first_call_result = get_config()
-        assert first_call_result == {"key": "value"}
-        mock_open_call.assert_called_once()
+        assert first_call_result["key"] == "value"
+        assert "backup_formats" in first_call_result  # from DEFAULTS
+        m.assert_called_once()
 
-        # Second call, should read from cache (mock_open should not be called again)
+        # Second call, should read from cache
         second_call_result = get_config()
-        assert second_call_result == {"key": "value"}
-        mock_open_call.assert_called_once()  # Still only called once
+        assert second_call_result == first_call_result
+        m.assert_called_once()  # Should not be called again
