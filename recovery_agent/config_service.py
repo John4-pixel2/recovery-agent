@@ -1,9 +1,9 @@
-
 # recovery_agent/config_service.py
 
-import yaml
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
+import yaml
 
 
 class ConfigError(Exception):
@@ -13,7 +13,7 @@ class ConfigError(Exception):
 _config_cache: Optional[Dict[str, Any]] = None
 
 
-def get_config(path: Optional[str | Path] = None) -> dict:
+def get_config(path: str | Path | None = None) -> dict:
     """
     Loads, validates, and returns the application configuration from a YAML file.
     The result is cached to avoid repeated file I/O on subsequent calls.

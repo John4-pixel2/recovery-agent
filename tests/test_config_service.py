@@ -70,8 +70,9 @@ def test_get_config_uses_cache():
     """
     # Mock the file-based loading to return a specific dict the first time
     config_data = yaml.dump({"key": "value"})
-    with patch("recovery_agent.config_service.Path.is_file", return_value=True), \
-         patch("builtins.open", mock_open(read_data=config_data)) as mock_open_call:
+    with patch(
+        "recovery_agent.config_service.Path.is_file", return_value=True
+    ), patch("builtins.open", mock_open(read_data=config_data)) as mock_open_call:
 
         # First call, should read from "file"
         first_call_result = get_config()
