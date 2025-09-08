@@ -7,8 +7,19 @@
 import pytest
 import yaml
 from pathlib import Path
+from unittest.mock import patch, mock_open
 
+from recovery_agent import config_service
 from recovery_agent.config_service import get_config, ConfigError
+
+
+@pytest.fixture(autouse=True)
+def reset_config_cache():
+    """
+    Fixture to automatically reset the config cache before each test.
+    This ensures test isolation.
+    """
+    config_service._config_cache = None
 
 
 def test_get_config_valid(tmp_path):
@@ -50,3 +61,24 @@ def test_get_config_not_dict(tmp_path):
     config_path.write_text("- one\n- two\n")
     with pytest.raises(ConfigError, match="must be a mapping"):
         get_config(config_path)
+
+
+def test_get_config_uses_cache():
+    """
+    Tests that the configuration is read from cache on subsequent calls
+    when no path is provided.
+    """
+    # Mock the file-based loading to return a specific dict the first time
+    config_data = yaml.dump({"key": "value"})
+    with patch("recovery_agent.config_service.Path.is_file", return_value=True), \
+         patch("builtins.open", mock_open(read_data=config_data)) as mock_open_call:
+
+        # First call, should read from "file"
+        first_call_result = get_config()
+        assert first_call_result == {"key": "value"}
+        mock_open_call.assert_called_once()
+
+        # Second call, should read from cache (mock_open should not be called again)
+        second_call_result = get_config()
+        assert second_call_result == {"key": "value"}
+        mock_open_call.assert_called_once()  # Still only called once
