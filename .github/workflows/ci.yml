@@ -33,28 +33,22 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[test,dev]"
-          pip install mypy types-PyYAML pytest-cov
+          pip install -e ".[test,dev]" # Installs everything from pyproject.toml
 
-      - name: Lint check (ruff + black)
+      - name: Lint and format check
         run: |
           ruff check .
           black --check .
 
-      - name: Type check (mypy)
+      - name: Type check
         run: |
           mypy recovery_agent
 
       - name: Run tests with coverage
         run: |
-          pytest --cov=recovery_agent --cov-report=xml --cov-fail-under=95
+          pytest --cov=recovery_agent --cov-report=xml --cov-fail-under=95 # Fails if coverage is below 95%
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # This uses the secret you just created
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # Optional for public repositories
+          token: ${{ secrets.CODECOV_TOKEN }} # Uses the secret you created
