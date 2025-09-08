@@ -1,2 +1,0 @@
-[console_scripts]
-recovery-agent-cli = recovery_agent.main:main
