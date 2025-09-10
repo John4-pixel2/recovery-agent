@@ -36,8 +36,12 @@ def get_config(path: str | Path | None = None) -> dict[str, Any]:
 
     config = copy.deepcopy(DEFAULTS)
 
-    has_explicit_path = path is not None
-    config_path = Path(path) if has_explicit_path else Path("config.yaml")
+    if path:  # Explicit path provided
+        config_path = Path(path)
+        if not config_path.is_file():
+            raise ConfigError(f"Configuration file not found: {config_path}")
+    else:  # Use default path
+        config_path = Path("config.yaml")
 
     if config_path.is_file():
         with config_path.open("r", encoding="utf-8") as f:
@@ -49,11 +53,8 @@ def get_config(path: str | Path | None = None) -> dict[str, Any]:
                     config.update(data)
             except yaml.YAMLError as e:
                 raise ConfigError(f"Invalid YAML configuration: {e}") from e
-    elif has_explicit_path:
-        # If a specific path was given and not found, raise an error.
-        raise ConfigError(f"Configuration file not found: {config_path}")
 
-    if not has_explicit_path:  # Only cache when using the default path
+    if path is None:  # Only cache when using the default path
         _config_cache = config
 
     return config
