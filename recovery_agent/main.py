@@ -1,8 +1,10 @@
 # recovery_agent/main.py
 import argparse
+import json
 import logging
 import sys
 
+from recovery_agent.analysis.anomaly_detector import analyze_backup
 from recovery_agent.config_service import ConfigError, get_config
 from recovery_agent.restoration.engine import RestorationEngine
 
@@ -20,14 +22,14 @@ def main():
         parser = argparse.ArgumentParser(description="Recovery-Agent CLI")
         parser.add_argument(
             "--action",
-            choices=["restore", "test"],
+            choices=["restore", "test", "analyze"],
             required=True,
-            help="Action to perform (restore or test)",
+            help="Action to perform (restore, test, or analyze)",
         )
         parser.add_argument(
             "--backup",
             type=str,
-            help="Path to the backup source directory. Required for restore action.",
+            help="Path to the backup source directory. Required for restore or analyze action.",
         )
         parser.add_argument("--env", type=str, default="prod", help="Environment")
         args = parser.parse_args()
@@ -38,9 +40,18 @@ def main():
 
             engine = RestorationEngine(backup_path=args.backup, config=settings)
             engine.run_restore()
+
+        elif args.action == "analyze":
+            if not args.backup:
+                parser.error('argument --backup is required for action "analyze"')
+
+            result = analyze_backup(args.backup, settings)
+            print(json.dumps(result, indent=2))
+
         elif args.action == "test":
             logging.info("Starting tests...")
             logging.info("Tests passed!")
+
     except ConfigError as e:
         logging.critical(f"Configuration error: {e}")
         return 1

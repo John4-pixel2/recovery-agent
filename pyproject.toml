@@ -37,7 +37,7 @@ recovery-agent-cli = "recovery_agent.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["recovery_agent"]
+include = ["recovery_agent*"]
 
 [tool.black]
 line-length = 88
