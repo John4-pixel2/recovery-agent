@@ -31,17 +31,18 @@ def get_config(path: str | Path | None = None) -> dict[str, Any]:
     - The result is cached to avoid repeated file I/O on subsequent calls.
     """
     global _config_cache
-    if path is None and _config_cache is not None:
-        return _config_cache
-
-    config = copy.deepcopy(DEFAULTS)
-
-    if path:  # Explicit path provided
+    if path is None:
+        if _config_cache is not None:
+            return _config_cache
+        # Use default path if no explicit path is given
+        config_path = Path("config.yaml")
+    else:
+        # Explicit path provided, must exist
         config_path = Path(path)
         if not config_path.is_file():
             raise ConfigError(f"Configuration file not found: {config_path}")
-    else:  # Use default path
-        config_path = Path("config.yaml")
+
+    config = copy.deepcopy(DEFAULTS)
 
     if config_path.is_file():
         with config_path.open("r", encoding="utf-8") as f:
