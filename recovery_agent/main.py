@@ -17,7 +17,7 @@ from recovery_agent.restoration.engine import RestorationEngine
 from recovery_agent.self_repair.repair_generator import (
     MissingDirectoryRule,
     PermissionErrorRule,
-    RuleRegistry,  # Geändert von RepairScriptGenerator
+    RuleRegistry,  # Importiere die RuleRegistry
 )
 
 # Configure logging
@@ -68,22 +68,28 @@ def main():
             result = analyze_backup(args.backup, settings)
             print(json.dumps(result, indent=2))
 
-        elif args.action == "repair":
+        elif args.action == "repair":  # Neuer Action-Block für 'repair'
             if not args.error_log:
                 parser.error('argument --error-log is required for action "repair"')
 
-            generator = RuleRegistry()  # Geändert von RepairScriptGenerator()
-            generator.register_rule(PermissionErrorRule())
-            generator.register_rule(MissingDirectoryRule())
+            # Initialisiere die RuleRegistry und registriere die Regeln
+            registry = RuleRegistry()
+            registry.register_rule(PermissionErrorRule())
+            registry.register_rule(MissingDirectoryRule())
 
-            script = generator.generate_script_suggestion(Path(args.error_log),
-                                                          tenant=args.tenant)  # Geändert von generate()
+            # Generiere den Skript-Vorschlag
+            # Der generate_script_suggestion erwartet einen String oder Path-Objekt
+            script_suggestion = registry.generate_script_suggestion(
+                Path(args.error_log), tenant=args.tenant
+            )
 
-            if script:
+            if script_suggestion:
                 print("--- Suggested Repair Script ---")
-                print(script)
+                print(script_suggestion)
                 print("-----------------------------")
             else:
+                # Dieser Fall sollte nur eintreten, wenn generate_script_suggestion None zurückgibt,
+                # was bei der aktuellen Implementierung nicht der Fall ist (gibt immer einen String zurück).
                 print("No repair script could be generated for the given log.")
 
         elif args.action == "intelligent-restore":
@@ -94,16 +100,16 @@ def main():
             print("--- Starting Intelligent Restore Protocol ---")
 
             # Step 1: Diagnose & Quick Fix
-            generator = RuleRegistry()  # Geändert von RepairScriptGenerator()
-            generator.register_rule(PermissionErrorRule())
-            generator.register_rule(MissingDirectoryRule())
-            repair_script = generator.generate_script_suggestion(  # Geändert von generate()
+            registry = RuleRegistry()
+            registry.register_rule(PermissionErrorRule())
+            registry.register_rule(MissingDirectoryRule())
+            repair_script = registry.generate_script_suggestion(
                 Path(args.error_log), tenant=args.tenant
             )
 
             if repair_script:
                 print(
-                    f"Step 1: Found a potential quick fix. Suggested script:\\n{repair_script}"
+                    f"Step 1: Found a potential quick fix. Suggested script:\n{repair_script}"
                 )
                 print(
                     "INFO: Assuming quick fix was applied or is not sufficient. Proceeding with restore."
@@ -112,7 +118,7 @@ def main():
                 print("Step 1: No quick fix found. Proceeding with restore.")
 
             # Step 2: Gather Intelligence
-            print("\nStep 2: Gathering intelligence...\n")  # Added newline for consistency
+            print("\nStep 2: Gathering intelligence...\n")
             stable_backup_path = get_last_stable_backup_path()
             current_version = get_codebase_version()
             backup_version = get_backup_version(Path(stable_backup_path))
@@ -122,7 +128,7 @@ def main():
             print(f"  - Current codebase version: {current_version}")
 
             # Step 3: Formulate Plan
-            print("\nStep 3: Formulating a plan...\n")  # Added newline for consistency
+            print("\nStep 3: Formulating a plan...\n")
             if backup_version == current_version:
                 print("  - Plan: Direct restore. No migration needed.")
                 # engine = RestorationEngine(backup_path=stable_backup_path, config=settings)
@@ -142,13 +148,13 @@ def main():
                     "  - SIMULATING: Executing restore to sandbox, applying migrations, and finalizing..."
                 )
 
-            print("\n--- Intelligent Restore Protocol Finished ---\n")  # Added newline for consistency
+            print("\n--- Intelligent Restore Protocol Finished ---\n")
 
         elif args.action == "test":
             logging.info("Starting tests...")
             logging.info("Tests passed!")
 
-    except ConfigServiceError as e:  # Fange die neue Basis-Exception
+    except ConfigServiceError as e:
         logging.critical(f"Configuration error: {e}")
         return 1
 
