@@ -1,4 +1,4 @@
-# recovery_agent/selfrepair/repair_generator.py
+# recovery_agent/self_repair/repair_generator.py
 
 import abc
 import re
@@ -78,10 +78,7 @@ class PermissionErrorRule(RepairRule):
         """
         match = self.PATH_REGEX.search(error_message)
         if not match:
-            return (
-                "# Error: Konnte keinen gültigen Pfad aus der 'Permission denied'-Meldung extrahieren.\n"
-                "# Das Logformat könnte unerwartet sein."
-            )
+            return "# Error: Could not extract a valid path from the 'Permission denied' message."
 
         path = match.group(1)
         script = f"# Repariere Berechtigungsproblem für Pfad: {path}\n"
@@ -116,10 +113,7 @@ class MissingDirectoryRule(RepairRule):
         """
         match = self.PATH_REGEX.search(error_message)
         if not match:
-            return (
-                "# Error: Konnte keinen gültigen Pfad aus der 'No such file or directory'-Meldung extrahieren.\n"
-                "# Das Logformat könnte unerwartet sein."
-            )
+            return "# Error: Could not extract a valid path from the 'No such file or directory' message."
 
         # Extrahiere den Verzeichnis-Teil des Pfades, da die Fehlermeldung
         # oft den Dateinamen enthält, aber wir das Verzeichnis erstellen wollen.
@@ -158,7 +152,7 @@ class RuleRegistry:
         self._rules.append(rule)
 
     def generate_script_suggestion(
-            self, error_message: str, tenant: Optional[str] = None
+        self, error_message: str, tenant: Optional[str] = None
     ) -> str:
         """
         Analysiert eine Fehlermeldung und generiert einen Reparaturskript-Vorschlag.

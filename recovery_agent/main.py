@@ -77,10 +77,11 @@ def main():
             registry.register_rule(PermissionErrorRule())
             registry.register_rule(MissingDirectoryRule())
 
-            # Generiere den Skript-Vorschlag
-            # Der generate_script_suggestion erwartet einen String oder Path-Objekt
+            # Lese den Inhalt der Fehlerprotokolldatei, da die Regeln den Text analysieren
+            error_content = Path(args.error_log).read_text(encoding="utf-8")
+
             script_suggestion = registry.generate_script_suggestion(
-                Path(args.error_log), tenant=args.tenant
+                error_content, tenant=args.tenant
             )
 
             if script_suggestion:
@@ -103,8 +104,9 @@ def main():
             registry = RuleRegistry()
             registry.register_rule(PermissionErrorRule())
             registry.register_rule(MissingDirectoryRule())
+            error_content = Path(args.error_log).read_text(encoding="utf-8")
             repair_script = registry.generate_script_suggestion(
-                Path(args.error_log), tenant=args.tenant
+                error_content, tenant=args.tenant
             )
 
             if repair_script:

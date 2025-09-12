@@ -1,10 +1,13 @@
 # tests/test_repair_generator.py
 
 import pytest
-from recovery_agent.selfrepair.repair_generator import (
+from typing import Optional
+
+from recovery_agent.self_repair.repair_generator import (
     MissingDirectoryRule,
     PermissionErrorRule,
     RuleRegistry,
+    RepairRule,  # Import the base class
 )
 
 
@@ -66,7 +69,7 @@ def test_path_extraction_failure_in_permission_error_rule(registry):
     error_log = "Permission denied, but the format is totally weird and has no path."
     script = registry.generate_script_suggestion(error_log)
     assert script is not None
-    assert "# Error: Konnte keinen gültigen Pfad aus der 'Permission denied'-Meldung extrahieren." in script
+    assert "# Error: Could not extract a valid path from the 'Permission denied' message." in script
 
 
 def test_path_extraction_failure_in_missing_directory_rule(registry):
@@ -76,7 +79,7 @@ def test_path_extraction_failure_in_missing_directory_rule(registry):
     error_log = "No such file or directory, but no path is given."
     script = registry.generate_script_suggestion(error_log)
     assert script is not None
-    assert "# Error: Konnte keinen gültigen Pfad aus der 'No such file or directory'-Meldung extrahieren." in script
+    assert "# Error: Could not extract a valid path from the 'No such file or directory' message." in script
 
 
 def test_register_invalid_rule_raises_type_error():
