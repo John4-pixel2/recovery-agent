@@ -79,3 +79,12 @@ dmypy.json
 # IDEs
 .idea/
 .vscode/
+
+# node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Other
+.DS_Store

@@ -52,17 +52,28 @@ This design makes the system highly modular. To support a new error type, you si
 ```python
 # 1. Define a specific rule
 class PermissionErrorRule(RepairRule):
-    def matches(self, log_content: str) -> bool:
-        return "Permission denied" in log_content
+    def matches(self, error_message: str, tenant: str | None = None) -> bool:
+        return "Permission denied" in error_message
 
-    def generate_script(self, log_content: str) -> str:
-        path = extract_path_from_log(log_content)
+    def generate_script(self, error_message: str, tenant: str | None = None) -> str:
+        # Path extraction is handled internally by the rule
+        match = self.PATH_REGEX.search(error_message)
+        if not match:
+            return "# Error: Could not extract path."
+        path = match.group(1)
+
+        # Tenant-specific logic can be added
+        if tenant:
+            return f"chown -R {tenant}_user:{tenant}_group {path}\nchmod -R 755 {path}"
+
         return f"chmod -R 755 {path}"
 
 # 2. Register the rule and use it
-generator = RepairScriptGenerator()
-generator.register_rule(PermissionErrorRule())
-suggested_script = generator.generate("CRITICAL: Permission denied for file /var/data/db.sql")
+registry = RuleRegistry()
+registry.register_rule(PermissionErrorRule())
+suggested_script = registry.find_repair(
+    "CRITICAL: Permission denied for file /var/data/db.sql", tenant="acme"
+)
 ```
 
 ## Installation
@@ -104,12 +115,17 @@ The agent provides several actions. The `--action` argument is always required.
     ```sh
     recovery-agent-cli --action repair --error-log /path/to/error.log
     ```
+    For tenant-specific repairs:
+    ```sh
+    recovery-agent-cli --action repair --error-log /path/to/error.log --tenant acme
+    ```
 
 -   **Run the full intelligent restore protocol:**
     This simulates a full autonomous recovery, including diagnosis, intelligence gathering, and planning.
     ```sh
     recovery-agent-cli --action intelligent-restore --error-log /path/to/error.log
     ```
+    This action also supports the optional `--tenant` flag.
 
 ### Web UI
 

@@ -72,26 +72,32 @@ def main():
             if not args.error_log:
                 parser.error('argument --error-log is required for action "repair"')
 
-            # Initialisiere die RuleRegistry und registriere die Regeln
+            try:
+                # Lese den Inhalt der Fehlerprotokolldatei
+                error_content = Path(args.error_log).read_text(encoding="utf-8")
+            except FileNotFoundError:
+                logging.error("Error log file not found at: %s", args.error_log)
+                return 1
+            except OSError as e:
+                logging.error("Error reading log file %s: %s", args.error_log, e)
+                return 1
+
+            # Initialisiere die Registry und finde das passende Reparaturskript
             registry = RuleRegistry()
             registry.register_rule(PermissionErrorRule())
             registry.register_rule(MissingDirectoryRule())
-
-            # Lese den Inhalt der Fehlerprotokolldatei, da die Regeln den Text analysieren
-            error_content = Path(args.error_log).read_text(encoding="utf-8")
-
-            script_suggestion = registry.generate_script_suggestion(
+            script_suggestion = registry.find_repair(
                 error_content, tenant=args.tenant
             )
 
-            if script_suggestion:
+            # Gib das Ergebnis aus
+            if script_suggestion != "No repair suggestion found for the given error.":
                 print("--- Suggested Repair Script ---")
                 print(script_suggestion)
                 print("-----------------------------")
             else:
-                # Dieser Fall sollte nur eintreten, wenn generate_script_suggestion None zurückgibt,
-                # was bei der aktuellen Implementierung nicht der Fall ist (gibt immer einen String zurück).
-                print("No repair script could be generated for the given log.")
+                logging.warning("No repair rule matched the provided error log.")
+                print(script_suggestion)
 
         elif args.action == "intelligent-restore":
             if not args.error_log:
@@ -105,11 +111,11 @@ def main():
             registry.register_rule(PermissionErrorRule())
             registry.register_rule(MissingDirectoryRule())
             error_content = Path(args.error_log).read_text(encoding="utf-8")
-            repair_script = registry.generate_script_suggestion(
+            repair_script = registry.find_repair(
                 error_content, tenant=args.tenant
             )
 
-            if repair_script:
+            if repair_script != "No repair suggestion found for the given error.":
                 print(
                     f"Step 1: Found a potential quick fix. Suggested script:\n{repair_script}"
                 )
