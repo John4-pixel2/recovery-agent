@@ -1,24 +1,11 @@
 # tests/test_repair_generator.py
 
 import pytest
-from recovery_agent.self_repair.repair_generator import (
+from recovery_agent.selfrepair.repair_generator import (
     MissingDirectoryRule,
     PermissionErrorRule,
     RuleRegistry,
-    RepairRule,  # Wichtig: RepairRule muss hier importiert sein
 )
-from typing import Optional
-
-
-# Die Hilfsklasse CatchAllRule wird außerhalb der Testfunktion definiert
-class CatchAllRule(RepairRule):
-    """Eine Testregel, die immer zutrifft und ein generisches Skript erzeugt."""
-
-    def matches(self, error_message: str, tenant: Optional[str] = None) -> bool:
-        return True  # Passt immer
-
-    def generate_script(self, error_message: str, tenant: Optional[str] = None) -> str:
-        return "# Catch-all script"
 
 
 @pytest.fixture
@@ -101,18 +88,23 @@ def test_register_invalid_rule_raises_type_error():
         registry.register_rule("not_a_rule_instance")  # type: ignore
 
 
-def test_rule_precedence(registry):  # registry fixture wird hier verwendet
+def test_rule_precedence(tmp_path):
     """
     Testet, dass die Regeln in der Reihenfolge ihrer Registrierung geprüft werden
     und die erste passende Regel gewinnt.
     """
-    # Hier registrieren wir die CatchAllRule zuerst, um ihre Präzedenz zu testen
-    # Wir müssen eine neue Registry-Instanz erstellen, da die Fixture 'registry'
-    # bereits Regeln registriert hat und wir die Reihenfolge hier kontrollieren wollen.
-    test_reg = RuleRegistry()
-    test_reg.register_rule(CatchAllRule())  # Diese Regel wird zuerst registriert
-    test_reg.register_rule(PermissionErrorRule())  # Diese sollte nie erreicht werden
+
+    class CatchAllRule(RepairRule):
+        def matches(self, error_message: str, tenant: Optional[str] = None) -> bool:
+            return True  # Passt immer
+
+        def generate_script(self, error_message: str, tenant: Optional[str] = None) -> str:
+            return "# Catch-all script"
+
+    registry = RuleRegistry()
+    registry.register_rule(CatchAllRule())  # Diese Regel wird zuerst registriert
+    registry.register_rule(PermissionErrorRule())  # Diese sollte nie erreicht werden
 
     error_log = "Permission denied"
-    script = test_reg.generate_script_suggestion(error_log)
+    script = registry.generate_script_suggestion(error_log)
     assert script == "# Catch-all script"  # Bestätigt, dass CatchAllRule gewonnen hat

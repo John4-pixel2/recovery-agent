@@ -1,4 +1,4 @@
-# recovery_agent/self_repair/repair_generator.py
+# recovery_agent/selfrepair/repair_generator.py
 
 import abc
 import re
@@ -8,77 +8,88 @@ from typing import List, Optional
 
 class RepairRule(abc.ABC):
     """
-    Abstract base class for a single self-repair rule.
+    Abstrakte Basisklasse für eine einzelne Self-Repair-Regel.
 
-    Each concrete rule must implement this class, providing a consistent
-    interface for matching log content and generating repair scripts.
+    Jede konkrete Regel muss diese Klasse implementieren und die Methoden
+    `matches` und `generate_script` überschreiben. Dies stellt sicher, dass
+    alle Regeln eine einheitliche Schnittstelle haben und der
+    `RuleRegistry` bekannt sind.
     """
 
-    # A robust regex to capture file paths (Linux/Windows), with optional quotes.
+    # Eine robuste Regex, um Dateipfade (Linux/Windows) zu erfassen,
+    # optional in einfachen oder doppelten Anführungszeichen.
+    # Gruppe 1 fängt den eigentlichen Pfad ein.
     PATH_REGEX = re.compile(r"""['"]?([a-zA-Z]:[\\/][^'"\s]+|/[^\s'"]+)['"]?""")
 
     @abc.abstractmethod
-    def matches(self, log_content: str, tenant_id: Optional[str] = None) -> bool:
+    def matches(self, error_message: str, tenant: Optional[str] = None) -> bool:
         """
-        Checks if the log content matches the error this rule can handle.
+        Prüft, ob die gegebene Fehlermeldung auf diese Regel zutrifft.
 
         Args:
-            log_content: The full content of the error log as a string.
-            tenant_id: An optional tenant ID for tenant-specific analysis.
+            error_message: Der vollständige Text der Fehlermeldung.
+            tenant: Die optionale ID des Mandanten, falls die Regel
+                    mandantenspezifische Kriterien hat.
 
         Returns:
-            True if the rule matches, False otherwise.
+            True, wenn die Regel zutrifft, andernfalls False.
         """
         pass
 
     @abc.abstractmethod
-    def generate_script(
-        self, log_content: str, tenant_id: Optional[str] = None
-    ) -> str:
+    def generate_script(self, error_message: str, tenant: Optional[str] = None) -> str:
         """
-        Generates a bash repair script based on the provided log content.
+        Generiert ein Bash-Reparaturskript basierend auf der Fehlermeldung.
 
-        This method is only called if `matches()` has returned True.
+        Diese Methode wird nur aufgerufen, wenn `matches()` zuvor True
+        zurückgegeben hat.
 
         Args:
-            log_content: The full content of the error log.
-            tenant_id: An optional tenant ID to generate tenant-specific scripts
-                       (e.g., using tenant-specific paths or user accounts).
+            error_message: Der vollständige Text der Fehlermeldung.
+            tenant: Die optionale ID des Mandanten, um mandantenspezifische
+                    Skripte zu erzeugen (z.B. Pfade, Benutzernamen).
 
         Returns:
-            A string containing an executable bash command or script.
+            Ein String, der ein ausführbares Bash-Kommando enthält.
         """
         pass
 
 
 class PermissionErrorRule(RepairRule):
     """
-    Rule to detect and suggest fixes for "Permission denied" errors.
+    Konkrete Regel zur Erkennung und Behebung von "Permission denied"-Fehlern.
+
+    Diese Regel sucht nach dem String "Permission denied" in der Fehlermeldung
+    und versucht, einen Pfad zu extrahieren, um ein `chmod`- oder `chown`-Kommando
+    vorzuschlagen.
     """
 
-    def matches(self, log_content: str, tenant_id: Optional[str] = None) -> bool:
-        """Detects errors pointing to "Permission denied"."""
-        return "Permission denied" in log_content
+    def matches(self, error_message: str, tenant: Optional[str] = None) -> bool:
+        """
+        Erkennt Fehlermeldungen, die auf "Permission denied" hinweisen.
+        """
+        return "Permission denied" in error_message
 
-    def generate_script(
-        self, log_content: str, tenant_id: Optional[str] = None
-    ) -> str:
+    def generate_script(self, error_message: str, tenant: Optional[str] = None) -> str:
         """
-        Generates a `chmod` or `chown` command for the path found in the log.
+        Generiert ein `chmod`-Kommando für den im Log gefundenen Pfad.
+        Optional wird ein `chown`-Kommando für mandantenspezifische Benutzer
+        hinzugefügt.
         """
-        match = self.PATH_REGEX.search(log_content)
+        match = self.PATH_REGEX.search(error_message)
         if not match:
             return (
-                "# Error: Could not extract a valid path from the permission error log.\n"
-                "# Log format might be unexpected."
+                "# Error: Konnte keinen gültigen Pfad aus der 'Permission denied'-Meldung extrahieren.\n"
+                "# Das Logformat könnte unerwartet sein."
             )
 
         path = match.group(1)
-        script = f"# Fix permissions for: {path}\n"
+        script = f"# Repariere Berechtigungsproblem für Pfad: {path}\n"
 
-        if tenant_id:
-            # For multi-tenant environments, set ownership to a tenant-specific user.
-            script += f"chown -R {tenant_id}_user:{tenant_id}_group {path}\n"
+        if tenant:
+            # Beispiel für mandantenspezifische Anpassung:
+            # Setze den Eigentümer auf einen Tenant-spezifischen Benutzer.
+            script += f"chown -R {tenant}_user:{tenant}_group {path}\n"
 
         script += f"chmod -R 755 {path}"
         return script
@@ -86,84 +97,82 @@ class PermissionErrorRule(RepairRule):
 
 class MissingDirectoryRule(RepairRule):
     """
-    Rule to detect and suggest fixes for "No such file or directory" errors.
+    Konkrete Regel zur Erkennung und Behebung von "No such file or directory"-Fehlern.
+
+    Diese Regel sucht nach dem String "No such file or directory" und versucht,
+    einen Pfad zu extrahieren, um ein `mkdir -p`-Kommando vorzuschlagen.
     """
 
-    def matches(self, log_content: str, tenant_id: Optional[str] = None) -> bool:
-        """Detects errors indicating a missing file or directory."""
-        return "No such file or directory" in log_content
+    def matches(self, error_message: str, tenant: Optional[str] = None) -> bool:
+        """
+        Erkennt Fehlermeldungen, die auf ein fehlendes Verzeichnis hinweisen.
+        """
+        return "No such file or directory" in error_message
 
-    def generate_script(
-        self, log_content: str, tenant_id: Optional[str] = None
-    ) -> str:
+    def generate_script(self, error_message: str, tenant: Optional[str] = None) -> str:
         """
-        Generates a `mkdir -p` command to create the missing directory structure.
+        Generiert ein `mkdir -p`-Kommando, um die fehlende Verzeichnisstruktur
+        zu erstellen.
         """
-        match = self.PATH_REGEX.search(log_content)
+        match = self.PATH_REGEX.search(error_message)
         if not match:
             return (
-                "# Error: Could not extract a valid path from the missing directory log.\n"
-                "# Log format might be unexpected."
+                "# Error: Konnte keinen gültigen Pfad aus der 'No such file or directory'-Meldung extrahieren.\n"
+                "# Das Logformat könnte unerwartet sein."
             )
 
-        # Extract the directory part of the path using pathlib for robustness
+        # Extrahiere den Verzeichnis-Teil des Pfades, da die Fehlermeldung
+        # oft den Dateinamen enthält, aber wir das Verzeichnis erstellen wollen.
         path = str(Path(match.group(1)).parent)
-        return f"# Create missing directory structure\nmkdir -p {path}"
+        return f"# Erstelle fehlendes Verzeichnis\nmkdir -p {path}"
 
 
-class RepairScriptGenerator:
+class RuleRegistry:
     """
-    Orchestrates the generation of repair scripts based on error logs.
+    Verwaltet und orchestriert die Self-Repair-Regeln.
 
-    This class maintains a list of `RepairRule` instances. It processes
-    an error log by checking it against each rule. The first rule that
-    matches is used to generate a repair script.
+    Diese Klasse hält eine Liste von `RepairRule`-Instanzen. Sie kann eine
+    Fehlermeldung analysieren und die erste passende Regel verwenden, um
+    einen Reparaturskript-Vorschlag zu generieren.
     """
 
     def __init__(self):
-        """Initializes the generator with an empty list of rules."""
+        """Initialisiert die Registry mit einer leeren Regelliste."""
         self._rules: List[RepairRule] = []
 
     def register_rule(self, rule: RepairRule):
         """
-        Registers a new rule with the generator.
+        Registriert eine neue Regel in der Registry.
 
-        This method makes the generator extensible. New rules can be added
-        dynamically without modifying the generator's core logic.
+        Regeln werden in der Reihenfolge ihrer Registrierung geprüft.
+        Die erste passende Regel wird verwendet.
 
         Args:
-            rule: An instance of a class that inherits from `RepairRule`.
+            rule: Eine Instanz einer Klasse, die von `RepairRule` erbt.
+
+        Raises:
+            TypeError: Wenn das übergebene Objekt keine Instanz von `RepairRule` ist.
         """
         if not isinstance(rule, RepairRule):
-            raise TypeError("Rule must be an instance of RepairRule.")
+            raise TypeError("Die Regel muss eine Instanz von RepairRule sein.")
         self._rules.append(rule)
 
-    def generate(
-        self, log_input: str | Path, tenant_id: Optional[str] = None
-    ) -> Optional[str]:
+    def generate_script_suggestion(
+            self, error_message: str, tenant: Optional[str] = None
+    ) -> str:
         """
-        Analyzes an error log and generates a corresponding repair script.
-
-        The log can be provided as a direct string or as a path to a log file.
+        Analysiert eine Fehlermeldung und generiert einen Reparaturskript-Vorschlag.
 
         Args:
-            log_input: The error log string or a `pathlib.Path` to the log file.
-            tenant_id: An optional tenant ID for tenant-specific rule processing.
+            error_message: Der vollständige Text der Fehlermeldung.
+            tenant: Die optionale ID des Mandanten für mandantenspezifische Regeln.
 
         Returns:
-            A string with the bash repair script if a matching rule is found,
-            otherwise None.
+            Ein String mit dem Bash-Reparaturskript, wenn eine passende Regel
+            gefunden wurde. Andernfalls wird eine Standardmeldung zurückgegeben.
         """
-        log_content = ""
-        if isinstance(log_input, Path):
-            if not log_input.is_file():
-                return f"# Error: Log file not found at {log_input}"
-            log_content = log_input.read_text(encoding="utf-8")
-        else:
-            log_content = log_input
-
         for rule in self._rules:
-            if rule.matches(log_content, tenant_id):
-                return rule.generate_script(log_content, tenant_id)
+            if rule.matches(error_message, tenant):
+                return rule.generate_script(error_message, tenant)
 
-        return None
+        return "No repair suggestion found for the given error."
