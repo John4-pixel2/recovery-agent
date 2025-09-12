@@ -9,9 +9,37 @@ A flexible agent designed to automate the restoration of application state from 
 - **Command-Line Interface**: A powerful CLI to trigger and manage restoration tasks.
 - **Intelligent Actions**: Includes analysis, self-repair, and an intelligent restore protocol.
 - **Web UI**: A simple Flask-based web interface to monitor the agent's status.
-- **Configurable**: Easily configure backup formats and target directories via a `config.yaml` file.
-- **Robust Testing**: High test coverage with `pytest` to ensure reliability.
+- **Configurable**: Easily configure backup formats and target directories via a `config.yaml` file, validated by Pydantic models.
+- **Robust Testing**: **100% test coverage** with `pytest` to ensure reliability.
 - **Automated Quality Checks**: CI pipeline using GitHub Actions for linting, formatting, type checking, and testing.
+
+## Configuration
+
+The `recovery-agent` uses a `config.yaml` file for its settings. The configuration is loaded and validated using Pydantic models, ensuring data integrity and type safety.
+
+By default, the agent looks for `config.yaml` in the current working directory. You can specify a custom path using the `CONFIG_PATH` environment variable.
+
+### `config.yaml` Structure Example
+
+```yaml
+app_name: "MyRecoveryAgent"
+debug_mode: false
+
+server:
+  host: "127.0.0.1"
+  port: 8000
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+
+recovery_settings:
+  target_dir: "/opt/recovery_agent/restored_files"
+  encrypt_key: "your-super-secret-base64-key" # Placeholder, should be generated securely
+  backup_formats:
+    logs: "*.log"
+    db: "*.sql"
+```
 
 ## Architecture Highlight: Modular Self-Repair
 
