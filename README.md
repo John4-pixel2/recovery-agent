@@ -12,6 +12,41 @@ A flexible agent designed to automate the restoration of application state from 
 - **Robust Testing**: High test coverage with `pytest` to ensure reliability.
 - **Automated Quality Checks**: CI pipeline using GitHub Actions for linting, formatting, type checking, and testing.
 
+## Architecture Highlight: Modular Self-Repair
+
+The agent is designed to be extensible. A key example is the **Self-Repair Script Generator**, which allows new error-handling rules to be added without modifying the core logic.
+
+The architecture is based on two main components:
+
+1.  **`RepairRule` (The Contract)**: An abstract base class that defines a common interface for all rules. Each rule must know how to `matches` a specific error in a log and how to `generate_script` for it.
+
+2.  **`RepairScriptGenerator` (The Orchestrator)**: This class manages a list of rule instances. It iterates through them and uses the first one that matches the error log to generate a suggested repair script.
+
+This design makes the system highly modular. To support a new error type, you simply create a new class that inherits from `RepairRule` and register it with the generator.
+
+### Example: Adding a `PermissionErrorRule`
+
+```python
+# 1. Define a specific rule
+class PermissionErrorRule(RepairRule):
+    def matches(self, log_content: str) -> bool:
+        return "Permission denied" in log_content
+
+    def generate_script(self, log_content: str) -> str:
+        # Logic to extract path and generate a `chmod` command
+        path = extract_path_from_log(log_content)
+        return f"chmod -R 755 {path}"
+
+# 2. Register the rule with the generator
+generator = RepairScriptGenerator()
+generator.register_rule(PermissionErrorRule())
+
+# 3. Use the generator to get a script for a given error
+error_log = "CRITICAL: Permission denied for file /var/data/db.sql"
+suggested_script = generator.generate(error_log)
+# Output: "chmod -R 755 /var/data/db.sql"
+```
+
 ## Installation
 
 1.  **Clone the repository:**
