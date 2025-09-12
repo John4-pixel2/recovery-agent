@@ -3,16 +3,19 @@
 from pathlib import Path
 from typing import Any, Dict
 
+from recovery_agent.config_service.models import AppConfig
 
-def analyze_backup(backup_path_str: str, config: Dict[str, Any]) -> Dict[str, Any]:
+
+def analyze_backup(backup_path_str: str, config: AppConfig) -> Dict[str, Any]:
     """
-    Analyzes a backup directory based on simple heuristics.
+    Analyzes a backup directory based on simple heuristics, using a validated config.
 
-    Heuristics:
-    - Checks if at least one SQL file exists and is not empty.
-    - Checks if at least one log file exists.
+    Args:
+        backup_path_str: The path to the backup source directory.
+        config: A validated AppConfig instance.
 
-    Returns a dictionary with analysis results.
+    Returns:
+        A dictionary with analysis results.
     """
     backup_path = Path(backup_path_str)
     if not backup_path.is_dir():
@@ -21,8 +24,10 @@ def analyze_backup(backup_path_str: str, config: Dict[str, Any]) -> Dict[str, An
             "details": {"error": f"Backup directory not found: {backup_path}"},
         }
 
-    sql_pattern = config.get("backup_formats", {}).get("db", "*.sql")
-    log_pattern = config.get("backup_formats", {}).get("logs", "*.log")
+    # Access settings through the validated, nested Pydantic model
+    recovery_conf = config.recovery_settings
+    sql_pattern = recovery_conf.backup_formats.get("db", "*.sql")
+    log_pattern = recovery_conf.backup_formats.get("logs", "*.log")
 
     sql_files = list(backup_path.glob(sql_pattern))
     log_files = list(backup_path.glob(log_pattern))

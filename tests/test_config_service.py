@@ -1,92 +1,125 @@
-from unittest.mock import mock_open, patch
+# tests/test_config_service.py
+
+import os
+from unittest.mock import patch
 
 import pytest
 import yaml
 
-from recovery_agent import config_service
-from recovery_agent.config_service import DEFAULTS, ConfigError, get_config
+# Importiere die neue öffentliche API
+from recovery_agent.config_service import (
+    ConfigFileError,
+    ConfigValidationError,
+    get_config,
+)
+# Importiere interne Teile für das Test-Setup
+from recovery_agent.config_service.accessor import _reset_config_cache_for_testing
+from recovery_agent.config_service.models import AppConfig
 
 
 @pytest.fixture(autouse=True)
-def reset_config_cache():
-    """
-    Fixture to automatically reset the config cache before each test.
-    This ensures test isolation.
-    """
-    config_service._config_cache = None
+def setup_teardown():
+    """Stellt sicher, dass der Cache vor jedem Test leer ist und die ENV-Variable sauber ist."""
+    _reset_config_cache_for_testing()
+    if "CONFIG_PATH" in os.environ:
+        del os.environ["CONFIG_PATH"]
+    yield
+    _reset_config_cache_for_testing()
+    if "CONFIG_PATH" in os.environ:
+        del os.environ["CONFIG_PATH"]
 
 
-def test_get_config_valid(tmp_path):
-    """
-    Tests that a valid YAML file is correctly read and merged with defaults.
-    """
-    config_path = tmp_path / "config.yaml"
-    config_content = {"target_dir": "/tmp/test", "encrypt_key": "abc123"}
-    config_path.write_text(yaml.dump(config_content))
-
-    expected_config = DEFAULTS.copy()
-    expected_config.update(config_content)
-
-    conf = get_config(config_path)
-    assert conf == expected_config
+def create_test_config_file(tmp_path, content):
+    """Hilfsfunktion zum Erstellen einer temporären config.yaml."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(yaml.dump(content))
+    return str(config_file)
 
 
-def test_get_config_file_not_found_raises_error(tmp_path):
-    """
-    Tests that ConfigError is raised if an explicit config file does not exist.
-    """
-    config_path = tmp_path / "missing.yaml"
-    with pytest.raises(ConfigError, match="Configuration file not found"):
-        get_config(config_path)
+# --- Test-Szenarien ---
+
+def test_load_valid_config_success(tmp_path):
+    """Happy Path: Testet das erfolgreiche Laden und Validieren einer korrekten Konfiguration."""
+    valid_content = {
+        "app_name": "MyTestApp",
+        "server": {"host": "0.0.0.0", "port": 9000},
+        "logging": {"level": "DEBUG"},
+        "recovery_settings": {
+            "target_dir": "/tmp/restored",
+            "backup_formats": {"db": "*.bak"},
+        },
+    }
+    config_path = create_test_config_file(tmp_path, valid_content)
+    os.environ["CONFIG_PATH"] = config_path
+
+    config = get_config()
+
+    assert isinstance(config, AppConfig)
+    assert config.server.host == "0.0.0.0"
+    assert config.recovery_settings.target_dir == "/tmp/restored"
 
 
-def test_get_config_no_file_returns_defaults():
-    """
-    Tests that default settings are returned if no config file is specified
-    and config.yaml is not found.
-    """
-    with patch("pathlib.Path.is_file", return_value=False):
-        conf = get_config()
-        assert conf == DEFAULTS
+def test_config_is_cached(tmp_path):
+    """Testet, ob die Konfiguration nach dem ersten Laden gecacht wird."""
+    valid_content = {
+        "app_name": "CacheTest",
+        "server": {"host": "localhost", "port": 8080},
+        "logging": {"level": "INFO"},
+        "recovery_settings": {
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+        },
+    }
+    config_path = create_test_config_file(tmp_path, valid_content)
+    os.environ["CONFIG_PATH"] = config_path
+
+    # Patche die Funktion dort, wo sie aufgerufen wird (im accessor-Modul)
+    with patch("recovery_agent.config_service.accessor.load_raw_config") as mock_loader:
+        mock_loader.return_value = valid_content
+
+        # Erster Aufruf: Soll die (gemockte) Ladefunktion aufrufen
+        config1 = get_config()
+        mock_loader.assert_called_once()
+
+        # Zweiter Aufruf: Soll aus dem Cache kommen und den Loader nicht erneut aufrufen
+        config2 = get_config()
+        mock_loader.assert_called_once()
+
+        assert config1 is config2
 
 
-def test_get_config_invalid_yaml(tmp_path):
-    """
-    Tests that ConfigError is raised for a malformed YAML file.
-    """
-    config_path = tmp_path / "invalid.yaml"
-    config_path.write_text("{this: is: invalid}")
-    with pytest.raises(ConfigError, match="Invalid YAML configuration"):
-        get_config(config_path)
+def test_file_not_found_raises_error():
+    """Edge Case: Testet, ob ein ConfigFileError ausgelöst wird, wenn die Datei nicht existiert."""
+    os.environ["CONFIG_PATH"] = "non_existent_file.yaml"
+    with pytest.raises(ConfigFileError, match="Konfigurationsdatei nicht gefunden"):
+        get_config()
 
 
-def test_get_config_not_dict(tmp_path):
-    """
-    Tests that ConfigError is raised if the YAML content is not a dictionary.
-    """
-    config_path = tmp_path / "list.yaml"
-    config_path.write_text("- one\n- two\n")
-    with pytest.raises(ConfigError, match=r"Config must be a mapping \(dict\)."):
-        get_config(config_path)
+def test_validation_error_missing_field(tmp_path):
+    """Edge Case (Pydantic): Testet, ob ein ConfigValidationError bei einem fehlenden Pflichtfeld ausgelöst wird."""
+    incomplete_content = {
+        "app_name": "IncompleteApp",
+        "server": {"host": "localhost"},
+        # logging und recovery_settings fehlen
+    }
+    config_path = create_test_config_file(tmp_path, incomplete_content)
+    os.environ["CONFIG_PATH"] = config_path
+
+    with pytest.raises(ConfigValidationError):
+        get_config()
 
 
-def test_get_config_uses_cache():
-    """
-    Tests that the configuration is read from cache on subsequent calls.
-    """
-    config_data = yaml.dump({"key": "value"})
-    m = mock_open(read_data=config_data)
+def test_validation_error_wrong_type(tmp_path):
+    """Edge Case (Pydantic): Testet, ob ein ConfigValidationError bei falschem Datentyp ausgelöst wird."""
+    wrong_type_content = {
+        "app_name": "WrongTypeApp",
+        "server": {"host": "localhost", "port": "not-a-number"},
+        "logging": {"level": "INFO"},
+        "recovery_settings": {
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+        },
+    }
+    config_path = create_test_config_file(tmp_path, wrong_type_content)
+    os.environ["CONFIG_PATH"] = config_path
 
-    with (
-        patch("pathlib.Path.is_file", return_value=True),
-        patch("pathlib.Path.open", m),
-    ):
-        # First call should read from file and cache the result
-        first_call_result = get_config()
-        assert first_call_result["key"] == "value"
-        assert "target_dir" in first_call_result  # From defaults
-
-        # Second call should hit the cache and not open the file again
-        second_call_result = get_config()
-        assert second_call_result == first_call_result
-        m.assert_called_once()
+    with pytest.raises(ConfigValidationError, match="server.port"):
+        get_config()

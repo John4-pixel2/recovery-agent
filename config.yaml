@@ -1,5 +1,14 @@
-target_dir: "/opt/recovery_agent/restored_files"
-encrypt_key: "your-super-secret-base64-key" # Placeholder, should be generated securely
-backup_formats:
-  logs: "*.log"
-  db: "*.sql"
+app_name: "RecoveryAgentApp"
+debug_mode: false
+server:
+  host: "127.0.0.1"
+  port: 8000
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+# Alte, aber immer noch benötigte Konfiguration für die Engine
+recovery_settings:
+  target_dir: "/opt/recovery_agent/restored_files"
+  backup_formats:
+    logs: "*.log"
+    db: "*.sql"

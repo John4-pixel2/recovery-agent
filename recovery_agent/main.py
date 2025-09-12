@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from recovery_agent.analysis.anomaly_detector import analyze_backup
-from recovery_agent.config_service import ConfigError, get_config
+from recovery_agent.config_service import ConfigServiceError, get_config
 from recovery_agent.intel.queries import (
     get_backup_version,
     get_codebase_version,
@@ -147,7 +147,7 @@ def main():
             logging.info("Starting tests...")
             logging.info("Tests passed!")
 
-    except ConfigError as e:
+    except ConfigServiceError as e:  # Fange die neue Basis-Exception
         logging.critical(f"Configuration error: {e}")
         return 1
 
