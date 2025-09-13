@@ -71,6 +71,3 @@ def test_run_restore_fails_if_backup_source_missing(tmp_path, caplog):
         success = engine.run_restore()
         assert success is False
         assert f"Backup source directory '{non_existent_source}' does not exist" in caplog.text
-
-# Note: The other tests in this file are now implicitly fixed because they
-# all use the corrected `create_mock_config` function.
