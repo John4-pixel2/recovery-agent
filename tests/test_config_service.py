@@ -6,14 +6,13 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-# Importiere die neue öffentliche API
+# Korrekte Imports für die neue Struktur
 from recovery_agent.config_service import (
     ConfigFileError,
     ConfigValidationError,
     get_config,
 )
-# Import the internal cache object to reset it directly
-from recovery_agent.config_service.accessor import _config_cache
+from recovery_agent.config_service.accessor import _reset_config_cache_for_testing
 from recovery_agent.config_service.models import AppConfig
 
 
@@ -25,6 +24,8 @@ def setup_teardown():
         del os.environ["CONFIG_PATH"]
     yield
     _reset_config_cache_for_testing()
+    if "CONFIG_PATH" in os.environ:
+        del os.environ["CONFIG_PATH"]
 
 
 def create_test_config_file(tmp_path, content):
@@ -45,6 +46,7 @@ def test_load_valid_config_success(tmp_path):
         "recovery_settings": {
             "target_dir": "/tmp/restored",
             "backup_formats": {"db": "*.bak"},
+            "encrypt_key": "a-secret-key",
         },
     }
     config_path = create_test_config_file(tmp_path, valid_content)
@@ -64,7 +66,9 @@ def test_config_is_cached(tmp_path):
         "server": {"host": "localhost", "port": 8080},
         "logging": {"level": "INFO"},
         "recovery_settings": {
-            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+            "target_dir": "/tmp",
+            "backup_formats": {"logs": "*.log"},
+            "encrypt_key": "another-key",
         },
     }
     config_path = create_test_config_file(tmp_path, valid_content)
@@ -113,7 +117,8 @@ def test_validation_error_wrong_type(tmp_path):
         "server": {"host": "localhost", "port": "not-a-number"},
         "logging": {"level": "INFO"},
         "recovery_settings": {
-            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+            "target_dir": "/tmp",
+            "backup_formats": {"logs": "*.log"},
         },
     }
     config_path = create_test_config_file(tmp_path, wrong_type_content)

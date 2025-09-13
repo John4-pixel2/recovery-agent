@@ -65,8 +65,8 @@ class RuleRegistry:
             raise TypeError("Rule must be an instance of RepairRule.")
         self._rules.append(rule)
 
-    def generate_script_suggestion(self, error_message: str, tenant: Optional[str] = None) -> str:
-        """Analyzes an error log and generates a repair script suggestion."""
+    def find_repair(self, error_message: str, tenant: Optional[str] = None) -> str:
+        """Analyzes an error log and finds a repair script from the registered rules."""
         for rule in self._rules:
             if rule.matches(error_message, tenant):
                 return rule.generate_script(error_message, tenant)
