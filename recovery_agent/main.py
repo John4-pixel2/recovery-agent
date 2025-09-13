@@ -17,7 +17,7 @@ from recovery_agent.restoration.engine import RestorationEngine
 from recovery_agent.self_repair.repair_generator import (
     MissingDirectoryRule,
     PermissionErrorRule,
-    RuleRegistry,  # Importiere die RuleRegistry
+    RuleRegistry,
 )
 
 # Configure logging
@@ -28,7 +28,6 @@ logging.basicConfig(
 
 def main():
     try:
-        # Get validated config from the central service
         settings = get_config()
 
         parser = argparse.ArgumentParser(description="Recovery-Agent CLI")
@@ -68,36 +67,24 @@ def main():
             result = analyze_backup(args.backup, settings)
             print(json.dumps(result, indent=2))
 
-        elif args.action == "repair":  # Neuer Action-Block für 'repair'
+        elif args.action == "repair":
             if not args.error_log:
                 parser.error('argument --error-log is required for action "repair"')
 
-            try:
-                # Lese den Inhalt der Fehlerprotokolldatei
-                error_content = Path(args.error_log).read_text(encoding="utf-8")
-            except FileNotFoundError:
-                logging.error("Error log file not found at: %s", args.error_log)
-                return 1
-            except OSError as e:
-                logging.error("Error reading log file %s: %s", args.error_log, e)
-                return 1
+            generator = RuleRegistry()
+            generator.register_rule(PermissionErrorRule())
+            generator.register_rule(MissingDirectoryRule())
 
-            # Initialisiere die Registry und finde das passende Reparaturskript
-            registry = RuleRegistry()
-            registry.register_rule(PermissionErrorRule())
-            registry.register_rule(MissingDirectoryRule())
-            script_suggestion = registry.find_repair(
-                error_content, tenant=args.tenant
+            script = generator.generate_script_suggestion(
+                Path(args.error_log), tenant=args.tenant
             )
 
-            # Gib das Ergebnis aus
-            if script_suggestion != "No repair suggestion found for the given error.":
+            if script != "No repair suggestion found for the given error.":
                 print("--- Suggested Repair Script ---")
-                print(script_suggestion)
+                print(script)
                 print("-----------------------------")
             else:
-                logging.warning("No repair rule matched the provided error log.")
-                print(script_suggestion)
+                print(script)
 
         elif args.action == "intelligent-restore":
             if not args.error_log:
@@ -106,13 +93,11 @@ def main():
                 )
             print("--- Starting Intelligent Restore Protocol ---")
 
-            # Step 1: Diagnose & Quick Fix
-            registry = RuleRegistry()
-            registry.register_rule(PermissionErrorRule())
-            registry.register_rule(MissingDirectoryRule())
-            error_content = Path(args.error_log).read_text(encoding="utf-8")
-            repair_script = registry.find_repair(
-                error_content, tenant=args.tenant
+            generator = RuleRegistry()
+            generator.register_rule(PermissionErrorRule())
+            generator.register_rule(MissingDirectoryRule())
+            repair_script = generator.generate_script_suggestion(
+                Path(args.error_log), tenant=args.tenant
             )
 
             if repair_script != "No repair suggestion found for the given error.":
@@ -125,8 +110,7 @@ def main():
             else:
                 print("Step 1: No quick fix found. Proceeding with restore.")
 
-            # Step 2: Gather Intelligence
-            print("\nStep 2: Gathering intelligence...\n")
+            print("\nStep 2: Gathering intelligence...")
             stable_backup_path = get_last_stable_backup_path()
             current_version = get_codebase_version()
             backup_version = get_backup_version(Path(stable_backup_path))
@@ -135,12 +119,9 @@ def main():
             )
             print(f"  - Current codebase version: {current_version}")
 
-            # Step 3: Formulate Plan
-            print("\nStep 3: Formulating a plan...\n")
+            print("\nStep 3: Formulating a plan...")
             if backup_version == current_version:
                 print("  - Plan: Direct restore. No migration needed.")
-                # engine = RestorationEngine(backup_path=stable_backup_path, config=settings)
-                # engine.run_restore()
             else:
                 print(
                     f"  - Plan: Schema-Drift detected. Migration required from {backup_version} to {current_version}."
@@ -156,7 +137,7 @@ def main():
                     "  - SIMULATING: Executing restore to sandbox, applying migrations, and finalizing..."
                 )
 
-            print("\n--- Intelligent Restore Protocol Finished ---\n")
+            print("\n--- Intelligent Restore Protocol Finished ---")
 
         elif args.action == "test":
             logging.info("Starting tests...")

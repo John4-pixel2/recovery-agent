@@ -1,15 +1,13 @@
-# config_service/exceptions.py
+# recovery_agent/config_service/exceptions.py
 
 class ConfigServiceError(Exception):
-    """Basis-Exception für alle Fehler im Config-Service."""
+    """Base exception for any configuration service related issue."""
     pass
 
-
-class ConfigFileError(ConfigServiceError):
-    """Wird ausgelöst, wenn die Konfigurationsdatei nicht geladen werden kann."""
+class ConfigFileError(Exception):
+    """Custom exception for errors related to the configuration file."""
     pass
 
-
-class ConfigValidationError(ConfigServiceError):
-    """Wird ausgelöst, wenn die Konfiguration nicht dem Pydantic-Modell entspricht."""
+class ConfigValidationError(Exception):
+    """Custom exception for errors during Pydantic model validation."""
     pass

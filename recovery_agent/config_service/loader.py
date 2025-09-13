@@ -1,4 +1,4 @@
-# config_service/loader.py
+# recovery_agent/config_service/loader.py
 
 import logging
 from pathlib import Path
@@ -31,7 +31,9 @@ def load_raw_config(path: str) -> Dict[str, Any]:
         with config_path.open("r", encoding="utf-8") as f:
             raw_config = yaml.safe_load(f)
             if not isinstance(raw_config, dict):
-                raise ConfigFileError(f"Die Konfigurationsdatei '{path}' muss ein YAML-Mapping (Dictionary) sein.")
+                raise ConfigFileError(
+                    f"Die Konfigurationsdatei '{path}' muss ein YAML-Mapping (Dictionary) sein."
+                )
             return raw_config
     except FileNotFoundError:
         logger.error(f"Konfigurationsdatei nicht gefunden: {path}")
@@ -39,3 +41,6 @@ def load_raw_config(path: str) -> Dict[str, Any]:
     except yaml.YAMLError as e:
         logger.error(f"Fehler beim Parsen der YAML-Datei: {path}", exc_info=True)
         raise ConfigFileError(f"Fehler beim Parsen der YAML-Datei: {e}") from e
+    except OSError as e:  # Fängt andere I/O-Fehler ab (z.B. PermissionError)
+        logger.error(f"Fehler beim Lesen der Konfigurationsdatei '{path}': {e}")
+        raise ConfigFileError(f"Fehler beim Lesen von {path}: {e}") from e
