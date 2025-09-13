@@ -1,20 +1,21 @@
 # tests/test_config_service.py
 
 import os
+from recovery_agent.config_service.loader import load_raw_config
 from unittest.mock import patch
 
 import pytest
 import yaml
 
 # Importiere die öffentliche API
-from config_service import (
+from recovery_agent.config_service import (
     ConfigFileError,
     ConfigValidationError,
     get_config,
 )
 # Importiere interne Teile für Test-Setup
-from config_service.accessor import _reset_config_cache_for_testing
-from config_service.models import AppConfig
+from recovery_agent.config_service.accessor import _reset_config_cache_for_testing
+from recovery_agent.config_service.models import AppConfig
 
 
 @pytest.fixture(autouse=True)
@@ -44,6 +45,9 @@ def test_load_valid_config_success(tmp_path):
         "logging": {"level": "DEBUG"},
         "app_name": "MyTestApp",
         "debug_mode": True,
+        "recovery_settings": {
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+        }
     }
     config_path = create_test_config_file(tmp_path, valid_content)
     os.environ["CONFIG_PATH"] = config_path
@@ -67,11 +71,14 @@ def test_config_is_cached(tmp_path):
         "server": {"host": "localhost", "port": 8080},
         "logging": {"level": "INFO"},
         "app_name": "CacheTest",
+        "recovery_settings": {
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+        },
     }
     config_path = create_test_config_file(tmp_path, valid_content)
     os.environ["CONFIG_PATH"] = config_path
 
-    with patch("config_service.loader.load_raw_config", wraps=load_raw_config) as mock_loader:
+    with patch("recovery_agent.config_service.service.load_raw_config", wraps=load_raw_config) as mock_loader:
         # Erster Aufruf: Soll die Datei laden
         config1 = get_config()
         mock_loader.assert_called_once()
@@ -88,7 +95,7 @@ def test_file_not_found_raises_error():
     Edge Case: Testet, ob ein `ConfigFileError` ausgelöst wird, wenn die Datei nicht existiert.
     """
     os.environ["CONFIG_PATH"] = "non_existent_file.yaml"
-    with pytest.raises(ConfigFileError, match="Konfigurationsdatei nicht gefunden"):
+    with pytest.raises(ConfigServiceError, match="Konfigurationsdatei nicht gefunden"):
         get_config()
 
 
@@ -101,7 +108,7 @@ def test_invalid_yaml_raises_error(tmp_path):
     config_file.write_text(invalid_yaml_content)
     os.environ["CONFIG_PATH"] = str(config_file)
 
-    with pytest.raises(ConfigFileError, match="Fehler beim Parsen der YAML-Datei"):
+    with pytest.raises(ConfigServiceError, match="Fehler beim Parsen der YAML-Datei"):
         get_config()
 
 
@@ -111,7 +118,9 @@ def test_validation_error_missing_field(tmp_path):
     """
     incomplete_content = {
         "server": {"host": "localhost", "port": 8080},
-        # "logging" fehlt
+        "recovery_settings": {
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+        },
         "app_name": "IncompleteApp",
     }
     config_path = create_test_config_file(tmp_path, incomplete_content)
@@ -129,6 +138,9 @@ def test_validation_error_wrong_type(tmp_path):
         "server": {"host": "localhost", "port": "not-a-number"},
         "logging": {"level": "INFO"},
         "app_name": "WrongTypeApp",
+        "recovery_settings": {
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+        },
     }
     config_path = create_test_config_file(tmp_path, wrong_type_content)
     os.environ["CONFIG_PATH"] = config_path
@@ -145,6 +157,9 @@ def test_validation_error_field_constraint(tmp_path):
         "server": {"host": "localhost", "port": -80},  # Port muss positiv sein
         "logging": {"level": "INFO"},
         "app_name": "InvalidPortApp",
+        "recovery_settings": {
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"}
+        },
     }
     config_path = create_test_config_file(tmp_path, invalid_port_content)
     os.environ["CONFIG_PATH"] = config_path

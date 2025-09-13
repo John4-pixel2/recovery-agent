@@ -1,7 +1,7 @@
 # config_service/models.py
 from typing import Dict, Optional
 
-from pydantic import BaseModel, Field, PositiveInt
+from pydantic import BaseModel, Field, PositiveInt, SecretStr
 
 
 class ServerSettings(BaseModel):
@@ -23,7 +23,7 @@ class RecoverySettings(BaseModel):
 
     target_dir: str
     backup_formats: Dict[str, str]
-    encrypt_key: Optional[str] = None  # Fehlendes Feld hinzugefügt
+    encrypt_key: Optional[SecretStr] = None  # Use SecretStr for sensitive data
 
 
 class AppConfig(BaseModel):
