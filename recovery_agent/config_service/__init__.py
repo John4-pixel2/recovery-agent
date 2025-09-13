@@ -1,19 +1,13 @@
-# config_service/__init__.py
+# recovery_agent/config_service/__init__.py
 
 """
-Stellt die öffentliche API für den Konfigurations-Service bereit.
+Makes the config_service a Python package and exposes the public API.
 
-Dieses Modul exportiert die Hauptfunktion `get_config` und die zugehörigen
-Exceptions, während die internen Implementierungsdetails (loader, models)
-verborgen bleiben.
+This allows other parts of the application to get the configuration
+with a simple import:
+`from recovery_agent.config_service import get_config`
 """
 
-from .accessor import get_config
+from .service import get_config
 from .exceptions import ConfigFileError, ConfigServiceError, ConfigValidationError
-
-__all__ = [
-    "get_config",
-    "ConfigServiceError",
-    "ConfigFileError",
-    "ConfigValidationError",
-]
+from .models import AppConfig

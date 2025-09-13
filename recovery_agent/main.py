@@ -75,9 +75,8 @@ def main():
             generator.register_rule(PermissionErrorRule())
             generator.register_rule(MissingDirectoryRule())
 
-            script = generator.generate_script_suggestion(
-                Path(args.error_log), tenant=args.tenant
-            )
+            error_content = Path(args.error_log).read_text(encoding="utf-8")
+            script = generator.generate_script_suggestion(error_content, tenant=args.tenant)
 
             if script != "No repair suggestion found for the given error.":
                 print("--- Suggested Repair Script ---")
@@ -96,9 +95,8 @@ def main():
             generator = RuleRegistry()
             generator.register_rule(PermissionErrorRule())
             generator.register_rule(MissingDirectoryRule())
-            repair_script = generator.generate_script_suggestion(
-                Path(args.error_log), tenant=args.tenant
-            )
+            error_content = Path(args.error_log).read_text(encoding="utf-8")
+            repair_script = generator.generate_script_suggestion(error_content, tenant=args.tenant)
 
             if repair_script != "No repair suggestion found for the given error.":
                 print(

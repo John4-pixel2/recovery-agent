@@ -6,16 +6,13 @@ from typing import Optional
 
 from pydantic import ValidationError
 
-from .loader import load_raw_config, ConfigLoaderError
+from .loader import load_raw_config
 from .models import AppConfig
+from .exceptions import ConfigServiceError, ConfigFileError, ConfigValidationError
+
 logger = logging.getLogger(__name__)
 
 _config_cache: Optional[AppConfig] = None
-
-
-class ConfigServiceError(Exception):
-    """Base exception for any configuration service related issue."""
-    pass
 
 
 def get_config() -> AppConfig:
@@ -45,9 +42,8 @@ def get_config() -> AppConfig:
         logger.info("Konfiguration erfolgreich validiert.")
         _config_cache = validated_config
         return _config_cache
-    except ConfigLoaderError as e:
+    except ConfigFileError as e:
         raise ConfigServiceError(e) from e
     except ValidationError as e:
         logger.critical("Fehler bei der Validierung der Konfiguration:\n%s", e)
-        sys.exit(1)
-
+        raise ConfigValidationError(f"Konfigurationsvalidierung fehlgeschlagen: {e}") from e

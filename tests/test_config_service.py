@@ -12,8 +12,8 @@ from recovery_agent.config_service import (
     ConfigValidationError,
     get_config,
 )
-# Importiere interne Teile für das Test-Setup
-from recovery_agent.config_service.accessor import _reset_config_cache_for_testing
+# Import the internal cache object to reset it directly
+from recovery_agent.config_service.accessor import _config_cache
 from recovery_agent.config_service.models import AppConfig
 
 
@@ -25,8 +25,6 @@ def setup_teardown():
         del os.environ["CONFIG_PATH"]
     yield
     _reset_config_cache_for_testing()
-    if "CONFIG_PATH" in os.environ:
-        del os.environ["CONFIG_PATH"]
 
 
 def create_test_config_file(tmp_path, content):

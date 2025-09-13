@@ -19,11 +19,11 @@ class LoggingSettings(BaseModel):
 
 
 class RecoverySettings(BaseModel):
-    """Pydantic model for the legacy restoration settings."""
+    """Pydantic model for the restoration and analysis settings."""
 
     target_dir: str
     backup_formats: Dict[str, str]
-    encrypt_key: Optional[str] = None
+    encrypt_key: Optional[str] = None  # Fehlendes Feld hinzugefügt
 
 
 class AppConfig(BaseModel):
@@ -33,4 +33,4 @@ class AppConfig(BaseModel):
     debug_mode: bool = False
     server: ServerSettings
     logging: LoggingSettings
-    recovery_settings: RecoverySettings  # Nested model for legacy settings
+    recovery_settings: RecoverySettings

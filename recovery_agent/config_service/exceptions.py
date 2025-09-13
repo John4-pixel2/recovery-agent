@@ -1,13 +1,15 @@
 # recovery_agent/config_service/exceptions.py
 
 class ConfigServiceError(Exception):
-    """Base exception for any configuration service related issue."""
+    """Base exception for all configuration service-related errors."""
     pass
 
-class ConfigFileError(Exception):
-    """Custom exception for errors related to the configuration file."""
+
+class ConfigFileError(ConfigServiceError):
+    """Exception for errors related to accessing the configuration file."""
     pass
 
-class ConfigValidationError(Exception):
-    """Custom exception for errors during Pydantic model validation."""
+
+class ConfigValidationError(ConfigServiceError):
+    """Exception for errors during Pydantic model validation."""
     pass

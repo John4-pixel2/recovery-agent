@@ -1,14 +1,16 @@
-app_name: "RecoveryAgentApp"
-debug_mode: false
+# Example configuration for the Recovery Agent
+
+app_name: "Recovery Agent"
+
 server:
-  host: "127.0.0.1"
-  port: 8000
+  host: "0.0.0.0"
+  port: 8080
+
 logging:
   level: "INFO"
-  format: "%(asctime)s - %(levelname)s - %(message)s"
-# Alte, aber immer noch benötigte Konfiguration für die Engine
+
 recovery_settings:
   target_dir: "/opt/recovery_agent/restored_files"
   backup_formats:
     logs: "*.log"
-    db: "*.sql"
+    db_dumps: "*.sql"
