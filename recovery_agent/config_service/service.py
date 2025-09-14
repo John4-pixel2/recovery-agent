@@ -20,11 +20,11 @@ def get_config() -> AppConfig:
         _config_cache = validated_config
         return _config_cache
 
-    except ConfigFileError as e:
-        # Cleanly wrap the specific file error into the public service error
-        raise ConfigServiceError(str(e)) from e
-
     except ValidationError as e:
         logger.critical(f"Validierungsfehler: {e}")
         # Pydantic-Validierungsfehler kapseln
         raise ConfigValidationError(str(e)) from e
+
+    except ConfigFileError as e:
+        # Cleanly wrap the specific file error into the public service error
+        raise ConfigServiceError(str(e)) from e

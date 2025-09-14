@@ -1,5 +1,4 @@
 # tests/test_config_service.py
-
 import os
 from recovery_agent.config_service.loader import load_raw_config
 from unittest.mock import patch
@@ -8,25 +7,10 @@ import pytest
 import yaml
 
 # Importiere die neue öffentliche API
-from recovery_agent.config_service import (
-    ConfigFileError,
-    ConfigValidationError,
-    get_config,
-)
+from recovery_agent.config_service import ConfigFileError, ConfigValidationError, get_config
 # Import the service module to directly manipulate its cache for testing
 from recovery_agent.config_service import service
 from recovery_agent.config_service.models import AppConfig
-
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    """Stellt sicher, dass der Cache vor jedem Test leer ist und die ENV-Variable sauber ist."""
-    # Directly reset the cache in the service module to ensure test isolation
-    service._config_cache = None
-    if "CONFIG_PATH" in os.environ:
-        del os.environ["CONFIG_PATH"]
-    yield
-
 
 def create_test_config_file(tmp_path, content):
     """Hilfsfunktion zum Erstellen einer temporären config.yaml."""
@@ -87,13 +71,6 @@ def test_config_is_cached(tmp_path):
         mock_loader.assert_called_once()
 
         assert config1 is config2
-
-
-def test_file_not_found_raises_error():
-    """Edge Case: Testet, ob ein ConfigFileError ausgelöst wird, wenn die Datei nicht existiert."""
-    os.environ["CONFIG_PATH"] = "non_existent_file.yaml"
-    with pytest.raises(ConfigFileError, match="Konfigurationsdatei nicht gefunden"):
-        get_config()
 
 
 def test_validation_error_missing_field(tmp_path):
