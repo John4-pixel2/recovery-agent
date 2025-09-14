@@ -49,6 +49,27 @@ recovery_settings:
     logs: "*.log"
     db: "*.sql"
 ```
+## Role in an Agentic Ecosystem
+ 
+ This project is designed not just as a standalone tool, but as a **specialist agent** that can be part of a larger, collaborative swarm of agents.
+ 
+ ### As a Tool for an Orchestrator
+ 
+ A higher-level "Agent" or a Language Model (LLM) can use `recovery-agent-cli` as a reliable tool. The agent has a well-defined command-line interface that acts as its API:
+ 
+ -   **Input**: It accepts structured arguments like `--action` and `--error-log`.
+ -   **Output**: It produces predictable output, such as a repair script or a JSON status, which can be parsed and used by the calling agent for further decisions.
+ 
+ This allows an orchestrator to delegate the complex task of "system recovery" without needing to know the internal implementation details.
+ 
+ ### Example Swarm Collaboration
+ 1.  A **Monitoring Agent** detects a critical error and saves the log.
+ 2.  It invokes the **Recovery Agent** (`intelligent-restore`) with the path to the error log.
+ 3.  The **Recovery Agent** analyzes the error, generates a fix, and applies it.
+ 4.  A **Validation Agent** is then triggered to confirm that the system is healthy again.
+
+
+
 
 ## Architecture Highlight: Modular Self-Repair
 
