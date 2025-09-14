@@ -1,4 +1,4 @@
-# config_service/models.py
+# recovery_agent/config_service/models.py
 from typing import Dict, Optional
 
 from pydantic import BaseModel, Field, PositiveInt, SecretStr

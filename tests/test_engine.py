@@ -70,4 +70,4 @@ def test_run_restore_fails_if_backup_source_missing(tmp_path, caplog):
     with caplog.at_level(logging.ERROR):
         success = engine.run_restore()
         assert success is False
-        assert f"Backup source directory '{non_existent_source}' does not exist" in caplog.text
+        assert f"Backup source directory \'{non_existent_source}\' does not exist" in caplog.text

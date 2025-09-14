@@ -2,6 +2,7 @@
 import sys
 import logging
 from unittest.mock import MagicMock, patch
+import textwrap
 
 import pytest
 
@@ -95,12 +96,19 @@ def test_main_entry_point_dunder(monkeypatch, tmp_path):
     """
     # 1. Create a dummy config file so the real get_config() doesn't fail
     config_file = tmp_path / "config.yaml"
-    config_file.write_text(
-        "app_name: Test\n"
-        "server: {host: localhost, port: 8000}\n"
-        "logging: {level: INFO}\n"
-        "recovery_settings: {target_dir: /tmp, backup_formats: {}}"
-    )
+    # Achtung: KEINE Einrückung am Zeilenanfang -> YAML wird so sicher korrekt gelesen
+    config_file.write_text(textwrap.dedent("""\
+    app_name: Test
+    server:
+      host: localhost
+      port: 8000
+    logging:
+      level: INFO
+    recovery_settings:
+      target_dir: /tmp
+      backup_formats: {}
+      encrypt_key: dummy-key
+    """))
 
     # 2. Change the current directory to where the config is
     monkeypatch.chdir(tmp_path)

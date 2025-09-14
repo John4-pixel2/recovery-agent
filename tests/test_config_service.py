@@ -1,31 +1,24 @@
 # tests/test_config_service.py
 
 import os
+from recovery_agent.config_service.loader import load_raw_config
 from unittest.mock import patch
 
 import pytest
 import yaml
 
-# Korrekte Imports für die neue Struktur
+# Importiere die neue öffentliche API
 from recovery_agent.config_service import (
     ConfigFileError,
     ConfigValidationError,
     get_config,
 )
-from recovery_agent.config_service.accessor import _reset_config_cache_for_testing
+# Import the service module to directly manipulate its cache for testing
+from recovery_agent.config_service import service
 from recovery_agent.config_service.models import AppConfig
 
 
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    """Stellt sicher, dass der Cache vor jedem Test leer ist und die ENV-Variable sauber ist."""
-    _reset_config_cache_for_testing()
-    if "CONFIG_PATH" in os.environ:
-        del os.environ["CONFIG_PATH"]
-    yield
-    _reset_config_cache_for_testing()
-    if "CONFIG_PATH" in os.environ:
-        del os.environ["CONFIG_PATH"]
+
 
 
 def create_test_config_file(tmp_path, content):
@@ -37,6 +30,7 @@ def create_test_config_file(tmp_path, content):
 
 # --- Test-Szenarien ---
 
+
 def test_load_valid_config_success(tmp_path):
     """Happy Path: Testet das erfolgreiche Laden und Validieren einer korrekten Konfiguration."""
     valid_content = {
@@ -46,7 +40,7 @@ def test_load_valid_config_success(tmp_path):
         "recovery_settings": {
             "target_dir": "/tmp/restored",
             "backup_formats": {"db": "*.bak"},
-            "encrypt_key": "a-secret-key",
+            "encrypt_key": "test-key",  # Added for consistency
         },
     }
     config_path = create_test_config_file(tmp_path, valid_content)
@@ -66,16 +60,15 @@ def test_config_is_cached(tmp_path):
         "server": {"host": "localhost", "port": 8080},
         "logging": {"level": "INFO"},
         "recovery_settings": {
-            "target_dir": "/tmp",
-            "backup_formats": {"logs": "*.log"},
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"},
             "encrypt_key": "another-key",
         },
     }
     config_path = create_test_config_file(tmp_path, valid_content)
     os.environ["CONFIG_PATH"] = config_path
 
-    # Patche die Funktion dort, wo sie aufgerufen wird (im accessor-Modul)
-    with patch("recovery_agent.config_service.accessor.load_raw_config") as mock_loader:
+    # Patch the function where it is used: in the `service` module
+    with patch("recovery_agent.config_service.service.load_raw_config", wraps=load_raw_config) as mock_loader:
         mock_loader.return_value = valid_content
 
         # Erster Aufruf: Soll die (gemockte) Ladefunktion aufrufen
@@ -117,8 +110,8 @@ def test_validation_error_wrong_type(tmp_path):
         "server": {"host": "localhost", "port": "not-a-number"},
         "logging": {"level": "INFO"},
         "recovery_settings": {
-            "target_dir": "/tmp",
-            "backup_formats": {"logs": "*.log"},
+            "target_dir": "/tmp", "backup_formats": {"logs": "*.log"},
+            "encrypt_key": "some-key",
         },
     }
     config_path = create_test_config_file(tmp_path, wrong_type_content)

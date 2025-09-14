@@ -75,12 +75,14 @@ def main():
             registry.register_rule(PermissionErrorRule())
             registry.register_rule(MissingDirectoryRule())
 
-            script = registry.find_repair(Path(args.error_log).read_text(), tenant=args.tenant)
+            script = registry.generate_script_suggestion(
+                Path(args.error_log), tenant=args.tenant
+            )
 
             if script != "No repair suggestion found for the given error.":
                 print("--- Suggested Repair Script ---")
                 print(script)
-                print("-----------------------------")
+                print("-----------------------------\n")
             else:
                 print(script)
 
@@ -89,16 +91,18 @@ def main():
                 parser.error(
                     'argument --error-log is required for action "intelligent-restore"'
                 )
-            print("--- Starting Intelligent Restore Protocol ---")
+            print("--- Starting Intelligent Restore Protocol ---\n")
 
             registry = RuleRegistry()
             registry.register_rule(PermissionErrorRule())
             registry.register_rule(MissingDirectoryRule())
-            repair_script = registry.find_repair(Path(args.error_log).read_text(), tenant=args.tenant)
+            repair_script = registry.generate_script_suggestion(
+                Path(args.error_log), tenant=args.tenant
+            )
 
             if repair_script != "No repair suggestion found for the given error.":
                 print(
-                    f"Step 1: Found a potential quick fix. Suggested script:\n{repair_script}"
+                    f"Step 1: Found a potential quick fix. Suggested script:\n{repair_script}\n"
                 )
                 print(
                     "INFO: Assuming quick fix was applied or is not sufficient. Proceeding with restore."
@@ -106,7 +110,7 @@ def main():
             else:
                 print("Step 1: No quick fix found. Proceeding with restore.")
 
-            print("\nStep 2: Gathering intelligence...")
+            print("\nStep 2: Gathering intelligence...\n")
             stable_backup_path = get_last_stable_backup_path()
             current_version = get_codebase_version()
             backup_version = get_backup_version(Path(stable_backup_path))
@@ -115,9 +119,11 @@ def main():
             )
             print(f"  - Current codebase version: {current_version}")
 
-            print("\nStep 3: Formulating a plan...")
+            print("\nStep 3: Formulating a plan...\n")
             if backup_version == current_version:
                 print("  - Plan: Direct restore. No migration needed.")
+                # engine = RestorationEngine(backup_path=stable_backup_path, config=settings)
+                # engine.run_restore()
             else:
                 print(
                     f"  - Plan: Schema-Drift detected. Migration required from {backup_version} to {current_version}."
@@ -133,7 +139,7 @@ def main():
                     "  - SIMULATING: Executing restore to sandbox, applying migrations, and finalizing..."
                 )
 
-            print("\n--- Intelligent Restore Protocol Finished ---")
+            print("\n--- Intelligent Restore Protocol Finished ---\n")
 
         elif args.action == "test":
             logging.info("Starting tests...")

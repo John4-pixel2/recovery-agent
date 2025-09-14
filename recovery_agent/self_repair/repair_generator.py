@@ -8,7 +8,7 @@ from typing import List, Optional
 
 class RepairRule(abc.ABC):
     """
-    Abstract base class for a single self-repair rule.
+    Abstrakte Basisklasse für eine einzelne Self-Repair-Regel.
     """
 
     PATH_REGEX = re.compile(r"""['"]?([a-zA-Z]:[\\/][^'"\s]+|/[^\s'"]+)['"]?""")
@@ -65,8 +65,8 @@ class RuleRegistry:
             raise TypeError("Rule must be an instance of RepairRule.")
         self._rules.append(rule)
 
-    def find_repair(self, error_message: str, tenant: Optional[str] = None) -> str:
-        """Analyzes an error log and finds a repair script from the registered rules."""
+    def generate_script_suggestion(self, error_message: str, tenant: Optional[str] = None) -> str:
+        """Analyzes an error log and generates a repair script suggestion."""
         for rule in self._rules:
             if rule.matches(error_message, tenant):
                 return rule.generate_script(error_message, tenant)
