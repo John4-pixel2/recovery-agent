@@ -79,31 +79,61 @@ This design makes the system highly modular. To support a new error type, you si
 
 ### Example: Adding a `PermissionErrorRule`
 
+This self-contained example demonstrates how to define and register a new rule.
+
 ```python
-# 1. Define a specific rule
+# --- Illustrative Example: How to add a new rule ---
+# In a real scenario, these classes would be imported from the agent's modules.
+# For this example, we define minimal versions to make it self-contained.
+import abc
+import re
+from typing import List, Optional
+
+class RepairRule(abc.ABC):
+    """Abstract base class for a repair rule."""
+    PATH_REGEX = re.compile(r"'/([^']+)'")
+    @abc.abstractmethod
+    def matches(self, error_message: str, tenant: Optional[str] = None) -> bool: ...
+    @abc.abstractmethod
+    def generate_script(self, error_message: str, tenant: Optional[str] = None) -> str: ...
+
+class RuleRegistry:
+    """A simple registry to manage and apply repair rules."""
+    def __init__(self): self._rules: List[RepairRule] = []
+    def register_rule(self, rule: RepairRule): self._rules.append(rule)
+    def find_repair(self, error_message: str, tenant: Optional[str] = None) -> str:
+        for rule in self._rules:
+            if rule.matches(error_message, tenant):
+                return rule.generate_script(error_message, tenant)
+        return "No repair suggestion found."
+
+# 1. Define your specific rule
 class PermissionErrorRule(RepairRule):
-    def matches(self, error_message: str, tenant: str | None = None) -> bool:
+    """A rule that detects 'Permission denied' and suggests a fix."""
+    def matches(self, error_message: str, tenant: Optional[str] = None) -> bool:
+        # This specific rule doesn't use the tenant, but others might.
         return "Permission denied" in error_message
 
-    def generate_script(self, error_message: str, tenant: str | None = None) -> str:
-        # Path extraction is handled internally by the rule
+    def generate_script(self, error_message: str, tenant: Optional[str] = None) -> str:
         match = self.PATH_REGEX.search(error_message)
         if not match:
-            return "# Error: Could not extract path."
+            return "# Error: Could not extract a valid path from the error."
         path = match.group(1)
 
         # Tenant-specific logic can be added
         if tenant:
-            return f"chown -R {tenant}_user:{tenant}_group {path}\nchmod -R 755 {path}"
-
-        return f"chmod -R 755 {path}"
+            return f"chown -R {tenant}_user:{tenant}_group '{path}'\nchmod -R 755 '{path}'"
+        return f"chmod -R 755 '{path}'"
 
 # 2. Register the rule and use it
 registry = RuleRegistry()
 registry.register_rule(PermissionErrorRule())
-suggested_script = registry.find_repair(
-    "CRITICAL: Permission denied for file /var/data/db.sql", tenant="acme"
-)
+
+# Find a repair for a specific error log
+error = "CRITICAL: Permission denied for file '/var/data/db.sql'"
+suggested_script = registry.find_repair(error, tenant="acme")
+
+print(suggested_script)
 ```
 
 ## Installation
