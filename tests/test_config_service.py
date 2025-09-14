@@ -18,7 +18,14 @@ from recovery_agent.config_service import service
 from recovery_agent.config_service.models import AppConfig
 
 
-
+@pytest.fixture(autouse=True)
+def setup_teardown():
+    """Stellt sicher, dass der Cache vor jedem Test leer ist und die ENV-Variable sauber ist."""
+    # Directly reset the cache in the service module to ensure test isolation
+    service._config_cache = None
+    if "CONFIG_PATH" in os.environ:
+        del os.environ["CONFIG_PATH"]
+    yield
 
 
 def create_test_config_file(tmp_path, content):

@@ -19,6 +19,24 @@ from recovery_agent.config_service.service import _config_cache
 from recovery_agent.config_service.models import AppConfig
 
 
+@pytest.fixture(autouse=True)
+def reset_cache_and_env():
+    """
+    This fixture automatically runs before and after each test.
+    It ensures that:
+    - The config cache is empty.
+    - CONFIG_PATH is not accidentally left over from previous tests.
+    """
+    global _config_cache
+    _config_cache = None
+    if "CONFIG_PATH" in os.environ:
+        del os.environ["CONFIG_PATH"]
+    yield
+    _config_cache = None
+    if "CONFIG_PATH" in os.environ:
+        del os.environ["CONFIG_PATH"]
+
+
 def create_test_config_file(tmp_path, content):
     """Helper function to create a temporary config.yaml."""
     config_file = tmp_path / "config.yaml"
@@ -67,19 +85,14 @@ def test_config_is_cached(tmp_path):
     config_path = create_test_config_file(tmp_path, valid_content)
     os.environ["CONFIG_PATH"] = config_path
 
-    # Patch the loader where it's looked up: in the `service` module.
-    with patch(
-        "recovery_agent.config_service.service.load_raw_config", wraps=load_raw_config
-    ) as mock_loader:
-        # First call: should load the file
+    # Patch the function where it is used (looked up), not where it is defined.
+    # The `get_config` function in `service.py` calls `load_raw_config`.
+    with patch("recovery_agent.config_service.service.load_raw_config", wraps=load_raw_config) as mock_loader:
         config1 = get_config()
         mock_loader.assert_called_once()
-
-        # Second call: should come from the cache
         config2 = get_config()
-        mock_loader.assert_called_once()  # Still only called once
-
-        assert config1 is config2  # Should be the exact same object
+        mock_loader.assert_called_once()
+        assert config1 is config2
 
 
 def test_file_not_found_raises_error():
