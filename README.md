@@ -19,6 +19,15 @@ The `recovery-agent` uses a `config.yaml` file for its settings. The configurati
 
 By default, the agent looks for `config.yaml` in the current working directory. You can specify a custom path using the `CONFIG_PATH` environment variable.
 
+### Error Handling
+
+The configuration service is designed to be robust. When calling `get_config()`, you can expect the following specific exceptions:
+
+-   `ConfigServiceError`: Raised for any issues related to file access (e.g., file not found, permission denied, invalid YAML format).
+-   `ConfigValidationError`: Raised if the content of the configuration file does not match the required structure or data types defined in the Pydantic models.
+
+This clear separation allows for precise error handling in the application's main logic.
+
 ### `config.yaml` Structure Example
 
 ```yaml
